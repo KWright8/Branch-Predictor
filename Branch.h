@@ -18,9 +18,11 @@ class Branch {
         void decrementSmithCounter();
         void printSmith();
         void oneBitSmith(char actual, int max); 
+        string getBinaryString(string address);
 
       
         void bimodalPredictor(int PCBits, string trace_file);
+        void printBimodal(vector<int> predictionTable);
         int bimodalPCBits; // M2
 
         void gsharePredictor(int PCBits, int globalbranchHitory, string trace_file);
@@ -31,6 +33,7 @@ class Branch {
         string hexAddress;
         int totalPredictions;
         int missPredictions;
+        
 
         Branch();
 
