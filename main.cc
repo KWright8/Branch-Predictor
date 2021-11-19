@@ -1,13 +1,7 @@
 #include <stdio.h>
 #include "Branch.h"
 
-
-
 int main(int argc, char *argv[]) {
-	// sim smith <B> <tracefile>   
-	// sim bimodal <M2> <tracefile>
-    //sim gshare <M1> <N> <tracefile>
-
 	Branch branchPredictor =  Branch();
 
 	string branchType = argv[1];
@@ -31,15 +25,4 @@ int main(int argc, char *argv[]) {
 			printf("Check your input");
 		}
 	}
-
-	// ifstream myfile;
-    // myfile.open (trace_file);
-    // string line;
-
-    // while ( getline (myfile,line) )
-    // {
-    //   memory.at(0).doStuff(line);
-    // }
-    // myfile.close();
-
 }

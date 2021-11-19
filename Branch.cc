@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <stdlib.h>
 #include <vector>
+#include <sstream>
 #include <string>
 #include <math.h> 
 #include "Branch.h"
@@ -31,7 +33,6 @@ void Branch::smithNBitCounterPredictor(int N, string trace_file) {
     command += " ";
     command += trace_file.c_str();
 
-    // printf("PARAMS SMITH %d, %s", N,trace_file.c_str());
     int m;
 
     // initilize counter 
@@ -131,6 +132,7 @@ void Branch::printSmith() {
 
 }
 
+// bimodal
 void Branch::bimodalPredictor(int PCBits, string trace_file) {
     command = "./sim bimodal ";
     command += to_string(PCBits);
@@ -234,7 +236,6 @@ void Branch::bimodalPredictor(int PCBits, string trace_file) {
 
 
 }
-
 void Branch::printBimodal(vector<int> predictionTable) {
     printf("COMMAND\n");
     printf("%s\n", command.c_str());
@@ -250,12 +251,99 @@ void Branch::printBimodal(vector<int> predictionTable) {
 
 }
 
+// gshare
 void Branch::gsharePredictor(int PCBits, int globalbranchHitory, string trace_file) {
-     printf("PARAMS BIMODAL %d, %d, %s", PCBits, globalbranchHitory, trace_file.c_str());
-    // Model a gshare branch predictor with parameters {m,n}, where:
-    // o m is the number of low-order PC bits used to form the prediction table index. Note: discard the lowest two bits of the PC, since they are always zero, i,e., use bits m+1 through 2 of the PC.
-    // o n is the number of bits in the global branch history register. Note: n<=m. Note: n
-    // may equal zero, in which case we have the simplest bimodal branch predictor
+    printf("PARAMS gshare %d, %d, %s\n", PCBits, globalbranchHitory, trace_file.c_str());
+    command = "./sim bimodal ";
+    command += to_string(PCBits);
+    command += " ";
+    command += trace_file.c_str();
+
+    vector<int> predictionTable;
+    string gbh;
+
+    // initilize  gbh 0
+    for (int i = 0; i < globalbranchHitory; i++){
+        gbh.push_back('0');
+    }
+
+    predictionTable.assign(pow(2.0, (float)PCBits), 4);
+    
+    ifstream myfile;
+    myfile.open (trace_file);
+    string line;
+    char prediction;
+    char actual;
+    int numMSB = PCBits - globalbranchHitory;
+    printf("NUMMSB %d\n", numMSB);
+
+
+    while ( getline (myfile,line) )
+    {
+        string address;
+        for (int i  = 0; i < line.length(); i++){
+            if (isalpha(line.at(i))|| isdigit(line.at(i))){
+                if( line.at(i) == 'n' or line.at(i) == 't') {
+                    actual = line.at(i);
+                } else {
+                    address.push_back(line.at(i));
+                }
+            }
+        }
+
+        printf("DEBUG: actual %c\n", actual);
+        printf("DEBUG: address: %s\n", address.c_str());
+        string binaryAddress =  getBinaryString(address);
+
+        printf("DEBUG: binary address: %s\n ", binaryAddress.c_str());
+        // get rid of last 2 zeros
+        binaryAddress.pop_back();
+        binaryAddress.pop_back();
+
+        printf("DEBUG: binary address without last 2 zeros: %s\n ", binaryAddress.c_str());
+
+        string temp;
+        int in = (binaryAddress.length() - 1);
+        // printf("LENGTH: %lu\n", binaryAddress.length());
+        for (int i  = 0; i < PCBits; i++) {
+
+            temp = binaryAddress.at(in) + temp;
+            in--;
+        }
+
+        printf("TEMP: %s\n", temp.c_str());
+
+        string MSB;
+        for (int i = 0; i < numMSB; i++) {
+            MSB.push_back(temp.at(i));
+        }
+
+        string LSB;
+        for (int i = 1; i <= globalbranchHitory; i++) {
+
+            LSB.push_back(temp.at((temp.length()) - i));
+
+        }
+
+
+        printf("DEBUG MSB: %s LSB %s\n", MSB.c_str(), LSB.c_str());
+        // printf("Hm %s\n", gbh.c_str());
+
+        string xorvalue = xorstring(gbh, LSB);
+
+
+        printf("DEBUG: xor %s\n ", xorvalue.c_str());
+
+        // remove excess leading 0s
+        string m_Index = MSB + xorvalue;
+        printf("%s\n", m_Index.c_str());
+
+        int index = std::stoull(temp, NULL,2);
+
+
+    }
+
+
 }
 
 string Branch::getBinaryString(string address){
@@ -321,6 +409,34 @@ string Branch::getBinaryString(string address){
         }
     }
     return temp;
+}
+
+string Branch::xorstring(string value1, string value2) {
+
+    // convert to int
+    int v1 = std::stoull(value1, NULL,2);
+    int v2 = std::stoull(value2, NULL,2);
+    int xor1 = v1^v2;
+    int i;
+
+    printf("DEBUG v1: %d v2: %d v1 XOR v2: %d\n", v1, v2, xor1);
+    stringstream ss;
+    ss << std::hex << xor1; // int decimal_value
+    std::string res ( ss.str() );
+    string final_value = res;
+    printf("DEBUG final: %s\n", final_value.c_str());
+
+    return getBinaryString( final_value);
+
+    
+
+
+
+    
+
+    // xor
+    // return as string
+
 }
 
 

@@ -20,6 +20,7 @@ class Branch {
         void oneBitSmith(char actual, int max); 
         string getBinaryString(string address);
         string command;
+        string xorstring(string value1, string value2);
 
       
         void bimodalPredictor(int PCBits, string trace_file);
