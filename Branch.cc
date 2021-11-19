@@ -26,6 +26,11 @@ void Branch::decrementSmithCounter(){
     smithCounter--;
 }
 void Branch::smithNBitCounterPredictor(int N, string trace_file) {
+    command = "./sim smith ";
+    command += to_string(N);
+    command += " ";
+    command += trace_file.c_str();
+
     // printf("PARAMS SMITH %d, %s", N,trace_file.c_str());
     int m;
 
@@ -34,22 +39,20 @@ void Branch::smithNBitCounterPredictor(int N, string trace_file) {
         case 1  :
             smithCounter = 1;
             m = 1;
-            printf("1\n");
         break; 
         case 2  :
             smithCounter = 2;
             m = 4;
-            printf("2\n");
+
         break; 
         case 3  :
             smithCounter = 4;
             m = 8;
-            printf("3\n");
+
         break; 
         case 4  :
             smithCounter = 8; 
             m = 16;
-            printf("4\n");
         break;      
         default : 
             printf("CHECK YOUR INPUT");
@@ -119,7 +122,7 @@ void Branch::oneBitSmith(char actual, int m) {
 }
 void Branch::printSmith() {
     printf("COMMAND\n");
-    printf("./sim smith 1 jpeg_trace.txt\n");
+    printf("%s\n", command.c_str());
     printf("OUTPUT\n");
     printf("number of predictions:		%d\n", totalPredictions);
     printf("number of mispredictions:	%d\n", missPredictions);
@@ -129,7 +132,12 @@ void Branch::printSmith() {
 }
 
 void Branch::bimodalPredictor(int PCBits, string trace_file) {
-    // printf("PARAMS BIMODAL %d, %s\n", PCBits,trace_file.c_str());
+    command = "./sim bimodal ";
+    command += to_string(PCBits);
+    command += " ";
+    command += trace_file.c_str();
+
+ 
 
     vector<int> predictionTable;
     predictionTable.assign(pow(2.0, (float)PCBits), 4);
@@ -155,17 +163,29 @@ void Branch::bimodalPredictor(int PCBits, string trace_file) {
         }
 
        // printf("DEBUG: actual %c, address %s\n", actual, address.c_str());
-
+        // printf("DEBUG: address: %s\n", address.c_str());
         string binaryAddress =  getBinaryString(address);
+
+        // printf("DEBUG: binary address: %s\n ", binaryAddress.c_str());
+        // get rid of last 2 zeros
+        binaryAddress.pop_back();
+        binaryAddress.pop_back();
+
+        // printf("DEBUG: binary address without last 2 zeros: %s\n ", binaryAddress.c_str());
+
         string temp;
-        int in = binaryAddress.length() - 3;
+        int in = (binaryAddress.length() - 1);
+        // printf("LENGTH: %lu\n", binaryAddress.length());
         for (int i  = 0; i < PCBits; i++) {
 
-            temp.push_back(binaryAddress.at(in));
+            temp = binaryAddress.at(in) + temp;
             in--;
         }
 
+        // printf("DEBUG: binary address: %s\n ", temp.c_str());
+
         int index = std::stoull(temp, NULL,2);
+        // printf("DEBUG: Index address: %d\n ", index);
         totalPredictions++;
         int m = 8;
     
@@ -202,7 +222,8 @@ void Branch::bimodalPredictor(int PCBits, string trace_file) {
  
     }
 
-    /printBimodal(predictionTable);
+    printBimodal(predictionTable);
+
    
 
 
@@ -216,7 +237,7 @@ void Branch::bimodalPredictor(int PCBits, string trace_file) {
 
 void Branch::printBimodal(vector<int> predictionTable) {
     printf("COMMAND\n");
-    printf("./sim bimodal 6 gcc_trace.txt\n");
+    printf("%s\n", command.c_str());
     printf("OUTPUT\n");
     printf("number of predictions:		%d\n", totalPredictions);
     printf("number of mispredictions:	%d\n", missPredictions);
@@ -224,7 +245,7 @@ void Branch::printBimodal(vector<int> predictionTable) {
     printf("FINAL BIMODAL CONTENTS\n");
 
     for (int i = 0; i < predictionTable.size(); i++){
-        printf("%d %d\n",i, predictionTable.at(i));
+        printf("%d   %d\n",i, predictionTable.at(i));
     }
 
 }

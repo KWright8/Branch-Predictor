@@ -19,6 +19,7 @@ class Branch {
         void printSmith();
         void oneBitSmith(char actual, int max); 
         string getBinaryString(string address);
+        string command;
 
       
         void bimodalPredictor(int PCBits, string trace_file);
