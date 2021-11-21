@@ -253,21 +253,15 @@ void Branch::printBimodal(vector<int> predictionTable) {
 
 // gshare
 void Branch::gsharePredictor(int PCBits, int globalbranchHitory, string trace_file) {
-    printf("PARAMS gshare %d, %d, %s\n", PCBits, globalbranchHitory, trace_file.c_str());
-    command = "./sim bimodal ";
+    // printf("PARAMS gshare %d, %d, %s\n", PCBits, globalbranchHitory, trace_file.c_str());
+    command = "./sim gshare ";
     command += to_string(PCBits);
     command += " ";
     command += trace_file.c_str();
 
     vector<int> predictionTable;
-    string gbh;
-
-    // initilize  gbh 0
-    for (int i = 0; i < globalbranchHitory; i++){
-        gbh.push_back('0');
-    }
-
     predictionTable.assign(pow(2.0, (float)PCBits), 4);
+    initGBH(globalbranchHitory);
     
     ifstream myfile;
     myfile.open (trace_file);
@@ -275,12 +269,13 @@ void Branch::gsharePredictor(int PCBits, int globalbranchHitory, string trace_fi
     char prediction;
     char actual;
     int numMSB = PCBits - globalbranchHitory;
-    printf("NUMMSB %d\n", numMSB);
 
-
+    int count = 0;
     while ( getline (myfile,line) )
-    {
+    {   
+        count++;
         string address;
+        totalPredictions++;
         for (int i  = 0; i < line.length(); i++){
             if (isalpha(line.at(i))|| isdigit(line.at(i))){
                 if( line.at(i) == 'n' or line.at(i) == 't') {
@@ -291,16 +286,16 @@ void Branch::gsharePredictor(int PCBits, int globalbranchHitory, string trace_fi
             }
         }
 
-        printf("DEBUG: actual %c\n", actual);
-        printf("DEBUG: address: %s\n", address.c_str());
+        // printf("DEBUG: actual %c\n", actual);
+        // printf("DEBUG: address: %s\n", address.c_str());
         string binaryAddress =  getBinaryString(address);
 
-        printf("DEBUG: binary address: %s\n ", binaryAddress.c_str());
+        // printf("DEBUG: binary address: %s\n", binaryAddress.c_str());
         // get rid of last 2 zeros
         binaryAddress.pop_back();
         binaryAddress.pop_back();
 
-        printf("DEBUG: binary address without last 2 zeros: %s\n ", binaryAddress.c_str());
+        // printf("DEBUG: binary address without last 2 zeros: %s\n", binaryAddress.c_str());
 
         string temp;
         int in = (binaryAddress.length() - 1);
@@ -311,38 +306,124 @@ void Branch::gsharePredictor(int PCBits, int globalbranchHitory, string trace_fi
             in--;
         }
 
-        printf("TEMP: %s\n", temp.c_str());
+        // printf("DEBUG: TEMP: %s\n", temp.c_str());
 
         string MSB;
         for (int i = 0; i < numMSB; i++) {
             MSB.push_back(temp.at(i));
         }
 
+
         string LSB;
         for (int i = 1; i <= globalbranchHitory; i++) {
 
-            LSB.push_back(temp.at((temp.length()) - i));
+            LSB = temp.at((temp.length()) - i) + LSB;
 
         }
 
 
-        printf("DEBUG MSB: %s LSB %s\n", MSB.c_str(), LSB.c_str());
-        // printf("Hm %s\n", gbh.c_str());
+        // printf("DEBUG: MSB: %s LSB %s\n", MSB.c_str(), LSB.c_str());
 
         string xorvalue = xorstring(gbh, LSB);
 
 
-        printf("DEBUG: xor %s\n ", xorvalue.c_str());
+        // printf("DEBUG: xor %s\n", xorvalue.c_str());
 
-        // remove excess leading 0s
-        string m_Index = MSB + xorvalue;
-        printf("%s\n", m_Index.c_str());
+        // printf("DEBUG: GBH %s\n", gbh.c_str());
+        // printf("DEBUG: gbh %d\n ", globalbranchHitory);
 
-        int index = std::stoull(temp, NULL,2);
+        string xortemp;
+
+        if (xorvalue.size() != globalbranchHitory){
+
+            // remove excess leading 0s
+            for (int i = 0; i < globalbranchHitory; i++) {
+                xortemp =  xorvalue.at(globalbranchHitory - i) + xortemp;
+            }
+           
+        } else {
+            xortemp = xorvalue;
+        }
+
+        // printf("DEBUG XORTEMP %s\n", xortemp.c_str());
+
+        string m_Index = MSB + xortemp;
+        // printf("DEBUG: INDEX BINARY %s\n", m_Index.c_str());
+        int index = std::stoull(m_Index, NULL,2);
+        // printf("DEBUG index %d\n", index);
+
+        // check table
+        if (predictionTable.at(index) >= 4){
+            prediction = 't';
+            
+        } else {
+            prediction = 'n';
+        }   
+
+        string outcome;
+        if (prediction != actual){
+            missPredictions++; 
+       
+        }
+        // printf("DEBUG:  outcome gbh %s\n", gbh.c_str());
+   
+
+        if (actual == 'n') {
+            if(predictionTable.at(index) > 0) {
+
+                int inter =  (predictionTable.at(index) - 1);
+                predictionTable.at(index) = inter;
+            }
+
+            outcome =  outcome + "0"; 
+            for (int i = 0; i < (gbh.length()-1); i++) {
+                outcome = outcome + gbh.at(i);
+            }
+        } else {
+            if(predictionTable.at(index) < 7) {
+                int interadd =  predictionTable.at(index) + 1;
+                predictionTable.at(index) =  interadd;
+            }  
+
+            // shift in 1 for taken
+            outcome =  outcome + "1"; 
+             for (int i = 0; i < (gbh.length()-1); i++) {
+                outcome = outcome + gbh.at(i);
+            }
+        } 
+
+        gbh = outcome;
+        // printf("\n\n");
+        // printf("DEBUG gbh %s\n", gbh.c_str());
 
 
+        // shift right once put actual value ar front
+        // taken shift in 1? not taken shift in 0?
     }
 
+    printGShare(predictionTable);
+    
+}
+
+void Branch::initGBH(int size) {
+        // initilize  gbh 0
+    for (int i = 0; i < size; i++){
+        gbh.push_back('0');
+    }
+}
+
+void Branch::printGShare(vector<int> predictionTable) {
+    printf("COMMAND\n");
+    printf("%s\n", command.c_str());
+    printf("OUTPUT\n");
+    printf("number of predictions:		%d\n", totalPredictions);
+    printf("number of mispredictions:	%d\n", missPredictions);
+    printf("misprediction rate:		%.2f%%\n", (((float)missPredictions/(float)totalPredictions)*100));
+    printf("FINAL BIMODAL CONTENTS\n");
+
+    // for (int i = 0; i < predictionTable.size(); i++){
+    //     printf("%d   %d\n",i, predictionTable.at(i));
+    // }
 
 }
 
@@ -419,24 +500,16 @@ string Branch::xorstring(string value1, string value2) {
     int xor1 = v1^v2;
     int i;
 
-    printf("DEBUG v1: %d v2: %d v1 XOR v2: %d\n", v1, v2, xor1);
+    // printf("DEBUG v1: %d v2: %d v1 XOR v2: %d\n", v1, v2, xor1);
     stringstream ss;
     ss << std::hex << xor1; // int decimal_value
     std::string res ( ss.str() );
     string final_value = res;
-    printf("DEBUG final: %s\n", final_value.c_str());
+    //printf("DEBUG final: %s\n", final_value.c_str());
+
+
 
     return getBinaryString( final_value);
-
-    
-
-
-
-    
-
-    // xor
-    // return as string
-
 }
 
 

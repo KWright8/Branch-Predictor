@@ -21,6 +21,7 @@ class Branch {
         string getBinaryString(string address);
         string command;
         string xorstring(string value1, string value2);
+        void printGShare(vector<int> predictionTable);
 
       
         void bimodalPredictor(int PCBits, string trace_file);
@@ -35,6 +36,8 @@ class Branch {
         string hexAddress;
         int totalPredictions;
         int missPredictions;
+        string gbh;
+        void initGBH(int size);
         
 
         Branch();
